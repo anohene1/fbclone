@@ -7,6 +7,7 @@ const nextConfig = {
       "platform.lookaside.fbsbx.com",
       "firebasestorage.googleapis.com",
       "scontent.facc1-1.fna.fbcdn.net",
+      "pbs.twimg.com",
     ],
   },
 };
