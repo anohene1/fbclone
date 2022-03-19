@@ -17,7 +17,9 @@ function StoryCard({ name, src, profile }) {
         layout="fill"
         className="object-cover filter brightness-75 rounded-full lg:rounded-3xl"
       />
-      <p className="absolute bottom-3 text-white text-sm">{name}</p>
+      <p className="absolute bottom-3 text-white text-sm hidden lg:block">
+        {name}
+      </p>
     </div>
   );
 }
