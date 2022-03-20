@@ -2,13 +2,26 @@ import { useSession } from "next-auth/react";
 import Image from "next/image";
 import { EmojiHappyIcon } from "@heroicons/react/outline";
 import { CameraIcon, VideoCameraIcon } from "@heroicons/react/solid";
-import { useRef } from "react";
-import { db } from "../firebase";
-import { serverTimestamp, addDoc, collection } from "firebase/firestore";
+import { useRef, useState } from "react";
+import { db, storage } from "../firebase";
+import {
+  getStorage,
+  ref,
+  getDownloadURL,
+  uploadString,
+} from "firebase/storage";
+import {
+  serverTimestamp,
+  addDoc,
+  collection,
+  setDoc,
+} from "firebase/firestore";
 
 function InputBox(props) {
   const { data: session } = useSession();
-  const inputRef = useRef(null);
+  const inputRef = useRef();
+  const filePickerRef = useRef(null);
+  const [imageToPost, setImageToPost] = useState(null);
 
   async function sendPost(event) {
     event.preventDefault();
@@ -21,9 +34,38 @@ function InputBox(props) {
       email: session.user.email,
       image: session.user.image,
       timestamp: serverTimestamp(),
+    }).then((doc) => {
+      if (imageToPost) {
+        const storageRef = ref(storage, `posts/${doc.id}`);
+
+        uploadString(storageRef, imageToPost, "data_url").then((snapshot) => {
+          console.log("uploaded an image");
+          getDownloadURL(snapshot.ref).then((downloadUrl) => {
+            console.log("file available at: ", downloadUrl);
+            setDoc(doc, { postImage: downloadUrl }, { merge: true });
+          });
+        });
+      }
     });
 
     inputRef.current.value = "";
+    setImageToPost(null);
+  }
+
+  function addImageToPost(event) {
+    const reader = new FileReader();
+
+    if (event.target.files[0]) {
+      reader.readAsDataURL(event.target.files[0]);
+    }
+
+    reader.onload = (readerEvent) => {
+      setImageToPost(readerEvent.target.result);
+    };
+  }
+
+  function removeImage() {
+    setImageToPost(null);
   }
 
   return (
@@ -46,6 +88,15 @@ function InputBox(props) {
           <button className="hidden" onClick={sendPost}>
             Submit
           </button>
+          {imageToPost && (
+            <div
+              onClick={removeImage}
+              className="flex flex-col filter hover:brightness-110 transition duration-150 transform hover:scale-105 cursor-pointer"
+            >
+              <img src={imageToPost} alt="" className="h-10 object-contain" />
+              <p className="text-xs text-red-500 text-center">Remove</p>
+            </div>
+          )}
         </form>
       </div>
       <div className="flex justify-evenly p-3 border-1 ">
@@ -54,9 +105,18 @@ function InputBox(props) {
           <p className="text-xs sm:text-sm xl:text-base">Live Video</p>
         </div>
 
-        <div className="inputIcon">
+        <div
+          onClick={() => filePickerRef.current.click()}
+          className="inputIcon"
+        >
           <CameraIcon className="h-7 text-green-400" />
           <p className="text-xs sm:text-sm xl:text-base">Photo/Video</p>
+          <input
+            ref={filePickerRef}
+            onChange={addImageToPost}
+            type="file"
+            hidden
+          />
         </div>
 
         <div className="inputIcon">
